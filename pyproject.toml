@@ -1,0 +1,133 @@
+[project]
+name = "agentup-rag"
+version = "0.1.0"
+description = "RAG (Retrieval-Augmented Generation) plugin for AgentUp with semantic search and document retrieval capabilities"
+readme = "README.md"
+authors = [
+    {name = "Luke Hinds", email = "luke@rdrocket.com"}
+]
+maintainers = [
+    {name = "Luke Hinds", email = "luke@rdrocket.com"}
+]
+keywords = ["agentup", "rag", "retrieval", "embedding", "vector", "search", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    # Core AgentUp dependency
+    "agentup>=0.1.0",
+
+    # Data models and validation
+    "pydantic>=2.0.0",
+
+    # Async HTTP client
+    "httpx>=0.24.0",
+
+    # Document processing
+    "PyMuPDF>=1.23.0",  # PDF processing
+    "beautifulsoup4>=4.12.0",  # HTML processing
+    "python-docx>=0.8.11",  # Word documents
+    "openpyxl>=3.1.0",  # Excel files
+
+    # Vector operations and embeddings
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+
+    # Local embedding models
+    "sentence-transformers>=2.2.0",
+    "torch>=2.0.0",
+
+    # Vector databases
+    "chromadb>=0.4.0",
+    "pinecone>=3.0.0",
+    "weaviate-client>=3.24.0",
+    "faiss-cpu>=1.7.4",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "tenacity>=8.2.0",  # Retry logic
+    "cryptography>=41.0.0",  # Encryption
+]
+
+[project.optional-dependencies]
+gpu = [
+    "faiss-gpu>=1.7.2",
+    "torch[cuda]>=2.0.0",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.3.0",
+    "ruff>=0.8.0",
+]
+docs = [
+    "sphinx>=7.1.0",
+    "sphinx-rtd-theme>=1.3.0",
+    "myst-parser>=2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/agentup/agentup-rag"
+Documentation = "https://agentup-rag.readthedocs.io"
+Repository = "https://github.com/agentup/agentup-rag"
+"Bug Tracker" = "https://github.com/agentup/agentup-rag/issues"
+
+[project.entry-points."agentup.capabilities"]
+rag = "agentup_rag.plugin:RAGPlugin"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+]
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentup_rag"]
+
+# Include static files in the wheel
+[tool.hatch.build.targets.wheel.force-include]
+"static" = "static"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
