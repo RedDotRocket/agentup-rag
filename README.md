@@ -4,7 +4,8 @@
   <img src="static/logo.png" alt="Compie Logo" width="400"/>
 </p>
 
-A comprehensive Retrieval-Augmented Generation (RAG) plugin for AgentUp that provides semantic search and document retrieval capabilities with pluggable backends for embeddings and vector storage.
+Note this plugin is currently in development and not extensively tested. It is intended for early adopters and contributors. If you encounter issues, please open an issue on GitHub, or even better, submit a pull request with a fix! If anyone is interested in ownership of this plugin, and you have proof of  previously
+being a good custodian of a project, please reach out.
 
 ## Features
 

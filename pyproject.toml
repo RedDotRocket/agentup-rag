@@ -89,7 +89,7 @@ Repository = "https://github.com/agentup/agentup-rag"
 "Bug Tracker" = "https://github.com/agentup/agentup-rag/issues"
 
 [project.entry-points."agentup.capabilities"]
-rag = "agentup_rag.plugin:RAGPlugin"
+agentup_rag = "agentup_rag.plugin:RAGPlugin"
 
 [tool.ruff]
 target-version = "py310"
