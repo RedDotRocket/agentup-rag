@@ -2,6 +2,8 @@
 
 This guide walks you through setting up an AgentUp agent with RAG (Retrieval-Augmented Generation) capabilities using the AgentUp RAG plugin.
 
+The RAG plugin enables your agents to perform semantic search, document retrieval, and question-answering by leveraging vector stores and embedding models. It supports various vector stores like Chroma, Pinecone, Weaviate, and Memory Store, and can use OpenAI embeddings or local models.
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
@@ -16,14 +18,21 @@ This guide walks you through setting up an AgentUp agent with RAG (Retrieval-Aug
 
 ## Prerequisites
 
-- Python 3.11 or higher
+- Python 3.11 or higher (3.13 is not supported by faiss-gpu yet!)
 - AgentUp framework installed
-- API keys for your chosen embedding provider (OpenAI recommended), or local embedding model (e.g., `all-MiniLM-L6-v2`)
+- API keys for your chosen embedding provider (OpenAI recommended), or local embedding model (e.g., `all-MiniLM-L6-v2`) set up
 - Access to a vector store (Chroma, Pinecone, Weaviate, or Memory Store)
 
 ## Installation
 
-### 1. Install the RAG Plugin
+
+### Pull from the AgentUp Plugin Registry
+
+```bash
+pip install agentup-rag --index-url https://api.agentup.dev/simple
+```
+
+### Install the RAG Plugin (local development)
 
 ```bash
 # Navigate to your AgentUp workspace
@@ -152,7 +161,7 @@ plugins:
   - plugin_id: rag
     name: "RAG Search & Retrieval"
     description: "Semantic search and document retrieval"
-    
+
     # Explicit capability configuration for security
     capabilities:
       - capability_id: index_document
@@ -163,7 +172,7 @@ plugins:
         required_scopes: ["rag:access"]
       - capability_id: list_collections
         required_scopes: ["rag:access"]
-    
+
     config:
       # Embedding backend configuration
       embedding_backend: "openai"
@@ -172,34 +181,34 @@ plugins:
         api_key: "${OPENAI_API_KEY}"
         batch_size: 100
         rate_limit: 1000
-        
-      # Vector store backend configuration  
+
+      # Vector store backend configuration
       vector_backend: "memory"
       vector_config:
         similarity_metric: "cosine"
         persist_path: "./vector_index.pkl"
         auto_save: true
         save_interval: 300
-        
+
       # Document processing configuration
       chunking:
         strategy: "recursive"
         chunk_size: 1000
         chunk_overlap: 200
         separators: ["\n\n", "\n", ".", "!", "?"]
-        
+
       # Search configuration
       search:
         default_k: 5
         max_k: 100
         similarity_threshold: 0.0
         include_metadata: true
-        
+
       # RAG configuration
       rag:
         max_context_length: 4000
         include_sources: true
-        
+
       # Collection management
       collections:
         default_collection: "documents"
@@ -225,7 +234,7 @@ security:
       keys:
         - key: "your-secure-api-key-here"
           scopes: ["api:read", "api:write", "rag:access"]
-  
+
   # Scope hierarchy
   scope_hierarchy:
     admin: ["*"]
@@ -261,7 +270,7 @@ plugins:
   - plugin_id: rag
     name: "RAG Search & Retrieval"
     description: "Production RAG with Pinecone"
-    
+
     capabilities:
       - capability_id: index_document
         required_scopes: ["rag:access"]
@@ -271,7 +280,7 @@ plugins:
         required_scopes: ["rag:access"]
       - capability_id: list_collections
         required_scopes: ["rag:access"]
-    
+
     config:
       # Embedding backend configuration
       embedding_backend: "openai"
@@ -280,8 +289,8 @@ plugins:
         api_key: "${OPENAI_API_KEY}"
         batch_size: 100
         rate_limit: 1000
-        
-      # Vector store backend configuration  
+
+      # Vector store backend configuration
       vector_backend: "pinecone"
       vector_config:
         api_key: "${PINECONE_API_KEY}"
@@ -292,19 +301,19 @@ plugins:
         deployment_type: "serverless"  # or "pod"
         cloud: "aws"
         region: "us-east-1"
-        
+
       # Document processing configuration
       chunking:
         strategy: "recursive"
         chunk_size: 1000
         chunk_overlap: 200
-        
+
       # Search configuration
       search:
         default_k: 5
         max_k: 50
         similarity_threshold: 0.1
-        
+
       # RAG configuration
       rag:
         max_context_length: 8000
@@ -329,7 +338,7 @@ security:
       keys:
         - key: "your-secure-api-key-here"
           scopes: ["api:read", "api:write", "rag:access"]
-  
+
   scope_hierarchy:
     admin: ["*"]
     api:write: ["api:read"]
@@ -356,7 +365,7 @@ plugins:
         required_scopes: ["rag:access"]
       - capability_id: list_collections
         required_scopes: ["rag:access"]
-    
+
     config:
       embedding_backend: "local"
       embedding_config:
@@ -364,7 +373,7 @@ plugins:
         device: "cpu"  # or "cuda" if you have GPU
         batch_size: 32
         normalize_embeddings: true
-        
+
       vector_backend: "chroma"
       vector_config:
         persist_directory: "./chroma_db"
@@ -403,24 +412,6 @@ cd my-rag-agent
 agentup agent serve
 ```
 
-### 2. Test Plugin Loading
-
-```bash
-# In another terminal, check if the agent is running
-curl http://localhost:8000/health
-
-# Check available capabilities
-curl -X POST http://localhost:8000/ \
-  -H "X-API-Key: your-secure-api-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "capabilities",
-    "id": 1
-  }'
-```
-
-You should see the RAG capabilities listed. The agent will understand natural language requests for indexing documents, searching, and asking questions about your documents.
 
 ## Example Usage
 
@@ -437,11 +428,10 @@ curl -X POST http://localhost:8000/ \
       "message": {
         "role": "user",
         "parts": [{
-          "kind": "text", 
-          "text": "Index this document: AgentUp is a comprehensive framework for creating production-ready AI agents. It provides tools for building, deploying, and managing AI agents with features like plugin systems, state management, and A2A communication protocols. Source: agentup_intro.txt, Collection: knowledge_base"
+          "kind": "text",
+          "text": "Index this document: AgentUp is a comprehensive framework for creating awesome AI agents. It provides tools for building, deploying, and managing AI agents with features like plugin systems, state management. Source: agentup_intro.txt, Collection: knowledge_base"
         }],
         "messageId": "msg-001",
-        "contextId": "rag-context-001",
         "kind": "message"
       }
     },
@@ -466,7 +456,6 @@ curl -X POST http://localhost:8000/ \
           "text": "Search for: What is AgentUp framework?"
         }],
         "messageId": "msg-002",
-        "contextId": "rag-context-001",
         "kind": "message"
       }
     },
@@ -491,7 +480,6 @@ curl -X POST http://localhost:8000/ \
           "text": "What are the key features of AgentUp?"
         }],
         "messageId": "msg-003",
-        "contextId": "rag-context-001",
         "kind": "message"
       }
     },
@@ -504,7 +492,7 @@ curl -X POST http://localhost:8000/ \
 If you have a chat interface connected to your agent, you can simply ask questions like:
 
 - "What is AgentUp?"
-- "Tell me about AI agent frameworks"  
+- "Tell me about AI agent frameworks"
 - "How does AgentUp handle plugins?"
 
 The agent will automatically use RAG to search your indexed documents and provide informed answers.
@@ -528,7 +516,6 @@ curl -X POST http://localhost:8000/ \
           "text": "Please call the index_document function with these parameters: content=\"AgentUp is a comprehensive framework for creating production-ready AI agents.\", source=\"agentup_intro.txt\", collection=\"knowledge_base\""
         }],
         "messageId": "msg-004",
-        "contextId": "rag-context-001",
         "kind": "message"
       }
     },
@@ -566,7 +553,7 @@ def index_document(content, source, collection="documents", api_key="your-secure
         },
         "id": 1
     }
-    
+
     response = requests.post(
         "http://localhost:8000/",
         headers={
@@ -575,7 +562,7 @@ def index_document(content, source, collection="documents", api_key="your-secure
         },
         data=json.dumps(payload)
     )
-    
+
     return response.json()
 
 def index_directory(directory_path, collection="documents"):
@@ -585,7 +572,7 @@ def index_directory(directory_path, collection="documents"):
             file_path = os.path.join(directory_path, filename)
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             result = index_document(content, filename, collection)
             print(f"Indexed {filename}: {result}")
 
@@ -600,7 +587,7 @@ You can organize documents into different collections:
 ```python
 # Index different types of documents
 index_document(content, "tech_doc.txt", "technical")
-index_document(content, "policy.txt", "policies") 
+index_document(content, "policy.txt", "policies")
 index_document(content, "faq.txt", "support")
 
 # Search within specific collections by mentioning them in queries
@@ -647,7 +634,7 @@ Also ensure your security configuration includes the `rag:access` scope:
 security:
   scope_hierarchy:
     rag:access: []
-  
+
   auth:
     api_key:
       keys:
@@ -661,7 +648,7 @@ security:
 
 **Solutions:**
 - Check API keys are set correctly
-- Verify network connectivity  
+- Verify network connectivity
 - Check service status (for cloud providers)
 - Review configuration parameters
 
@@ -730,12 +717,12 @@ config:
   # Increase batch sizes
   embedding_config:
     batch_size: 200
-    
+
   # Optimize chunking
   chunking:
     chunk_size: 800  # Smaller chunks for better precision
     chunk_overlap: 150
-    
+
   # Tune search parameters
   search:
     default_k: 10
@@ -751,7 +738,7 @@ config:
   embedding_config:
     model: "all-MiniLM-L6-v2"  # 384 dimensions vs 1536
     batch_size: 16  # Smaller batches
-    
+
   # Smaller chunks
   chunking:
     chunk_size: 500
@@ -768,7 +755,7 @@ config:
 
 ## Resources
 
-- [AgentUp Documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [AgentUp Documentation](https://docs.agentup.dev/)
 - [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings)
 - [Pinecone Documentation](https://docs.pinecone.io/)
 - [Chroma Documentation](https://docs.trychroma.com/)

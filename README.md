@@ -27,6 +27,9 @@ cd agentup-rag
 # Install in development mode
 pip install -e .
 
+# For GPU acceleration (requires Python 3.12 or earlier)
+pip install -e ".[gpu]"
+
 # Verify installation
 agentup plugin list
 ```
@@ -34,8 +37,14 @@ agentup plugin list
 ### From PyPI (when published)
 
 ```bash
+# Standard installation
 pip install agentup-rag
+
+# With GPU support (requires Python 3.12 or earlier)
+pip install "agentup-rag[gpu]"
 ```
+
+**Note**: GPU acceleration via FAISS-GPU is only available for Python 3.9-3.12. Python 3.13+ users will automatically use CPU-only FAISS.
 
 ## Quick Start
 

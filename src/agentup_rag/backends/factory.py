@@ -6,7 +6,7 @@ based on configuration. It uses a registry pattern to allow easy addition of new
 """
 
 import logging
-from typing import Any, Dict, Type
+from typing import Any
 
 from ..models import (
     ChromaVectorStoreConfig,
@@ -30,10 +30,10 @@ class BackendRegistry:
 
     def __init__(self):
         """Initialize empty registries."""
-        self._embedding_backends: Dict[str, Type[EmbeddingBackend]] = {}
-        self._vector_store_backends: Dict[str, Type[VectorStoreBackend]] = {}
+        self._embedding_backends: dict[str, type[EmbeddingBackend]] = {}
+        self._vector_store_backends: dict[str, type[VectorStoreBackend]] = {}
 
-    def register_embedding_backend(self, name: str, backend_class: Type[EmbeddingBackend]) -> None:
+    def register_embedding_backend(self, name: str, backend_class: type[EmbeddingBackend]) -> None:
         """Register an embedding backend implementation.
 
         Args:
@@ -41,12 +41,12 @@ class BackendRegistry:
             backend_class: Backend implementation class
         """
         if not issubclass(backend_class, EmbeddingBackend):
-            raise ValueError(f"Backend class must inherit from EmbeddingBackend")
+            raise ValueError("Backend class must inherit from EmbeddingBackend")
 
         self._embedding_backends[name] = backend_class
         logger.debug(f"Registered embedding backend: {name}")
 
-    def register_vector_store_backend(self, name: str, backend_class: Type[VectorStoreBackend]) -> None:
+    def register_vector_store_backend(self, name: str, backend_class: type[VectorStoreBackend]) -> None:
         """Register a vector store backend implementation.
 
         Args:
@@ -54,12 +54,12 @@ class BackendRegistry:
             backend_class: Backend implementation class
         """
         if not issubclass(backend_class, VectorStoreBackend):
-            raise ValueError(f"Backend class must inherit from VectorStoreBackend")
+            raise ValueError("Backend class must inherit from VectorStoreBackend")
 
         self._vector_store_backends[name] = backend_class
         logger.debug(f"Registered vector store backend: {name}")
 
-    def get_embedding_backend(self, name: str) -> Type[EmbeddingBackend]:
+    def get_embedding_backend(self, name: str) -> type[EmbeddingBackend]:
         """Get an embedding backend class by name.
 
         Args:
@@ -77,7 +77,7 @@ class BackendRegistry:
 
         return self._embedding_backends[name]
 
-    def get_vector_store_backend(self, name: str) -> Type[VectorStoreBackend]:
+    def get_vector_store_backend(self, name: str) -> type[VectorStoreBackend]:
         """Get a vector store backend class by name.
 
         Args:
@@ -124,11 +124,11 @@ class BackendFactory:
     """
 
     @staticmethod
-    def create_embedding_backend(backend_type: str, config: Dict[str, Any]) -> EmbeddingBackend:
+    def create_embedding_backend(backend_type: str, config: dict[str, Any]) -> EmbeddingBackend:
         """Create an embedding backend instance.
 
         Args:
-            backend_type: Type of backend to create (e.g., 'openai', 'local')
+            backend_type: type of backend to create (e.g., 'openai', 'local')
             config: Configuration dictionary for the backend
 
         Returns:
@@ -155,11 +155,11 @@ class BackendFactory:
             raise ValueError(f"Failed to create embedding backend '{backend_type}': {e}") from e
 
     @staticmethod
-    def create_vector_store_backend(backend_type: str, config: Dict[str, Any]) -> VectorStoreBackend:
+    def create_vector_store_backend(backend_type: str, config: dict[str, Any]) -> VectorStoreBackend:
         """Create a vector store backend instance.
 
         Args:
-            backend_type: Type of backend to create (e.g., 'memory', 'chroma')
+            backend_type: type of backend to create (e.g., 'memory', 'chroma')
             config: Configuration dictionary for the backend
 
         Returns:
@@ -186,7 +186,7 @@ class BackendFactory:
             raise ValueError(f"Failed to create vector store backend '{backend_type}': {e}") from e
 
     @staticmethod
-    def _validate_embedding_config(backend_type: str, config: Dict[str, Any]):
+    def _validate_embedding_config(backend_type: str, config: dict[str, Any]):
         """Validate configuration for embedding backend.
 
         Args:
@@ -215,7 +215,7 @@ class BackendFactory:
             raise ValueError(f"Invalid configuration for {backend_type} embedding backend: {e}") from e
 
     @staticmethod
-    def _validate_vector_store_config(backend_type: str, config: Dict[str, Any]):
+    def _validate_vector_store_config(backend_type: str, config: dict[str, Any]):
         """Validate configuration for vector store backend.
 
         Args:
@@ -246,11 +246,11 @@ class BackendFactory:
             raise ValueError(f"Invalid configuration for {backend_type} vector store backend: {e}") from e
 
     @staticmethod
-    def list_available_backends() -> Dict[str, list[str]]:
+    def list_available_backends() -> dict[str, list[str]]:
         """List all available backend types.
 
         Returns:
-            Dictionary with 'embedding' and 'vector_store' keys containing lists of backend names
+            dictionary with 'embedding' and 'vector_store' keys containing lists of backend names
         """
         return {
             "embedding": _registry.list_embedding_backends(),
@@ -258,7 +258,7 @@ class BackendFactory:
         }
 
 
-def register_embedding_backend(name: str, backend_class: Type[EmbeddingBackend]) -> None:
+def register_embedding_backend(name: str, backend_class: type[EmbeddingBackend]) -> None:
     """Register an embedding backend implementation.
 
     This is a convenience function for registering backends with the global registry.
@@ -270,7 +270,7 @@ def register_embedding_backend(name: str, backend_class: Type[EmbeddingBackend])
     _registry.register_embedding_backend(name, backend_class)
 
 
-def register_vector_store_backend(name: str, backend_class: Type[VectorStoreBackend]) -> None:
+def register_vector_store_backend(name: str, backend_class: type[VectorStoreBackend]) -> None:
     """Register a vector store backend implementation.
 
     This is a convenience function for registering backends with the global registry.
@@ -293,12 +293,14 @@ def auto_register_backends() -> None:
     # Try to register embedding backends
     try:
         from .embedding.openai import OpenAIEmbeddingBackend
+
         register_embedding_backend("openai", OpenAIEmbeddingBackend)
     except ImportError as e:
         logger.warning(f"OpenAI embedding backend not available: {e}")
 
     try:
         from .embedding.local import LocalEmbeddingBackend
+
         register_embedding_backend("local", LocalEmbeddingBackend)
     except ImportError as e:
         logger.warning(f"Local embedding backend not available: {e}")
@@ -306,24 +308,28 @@ def auto_register_backends() -> None:
     # Try to register vector store backends
     try:
         from .vector_store.memory import MemoryVectorStoreBackend
+
         register_vector_store_backend("memory", MemoryVectorStoreBackend)
     except ImportError as e:
         logger.warning(f"Memory vector store backend not available: {e}")
 
     try:
         from .vector_store.chroma import ChromaVectorStoreBackend
+
         register_vector_store_backend("chroma", ChromaVectorStoreBackend)
     except ImportError as e:
         logger.warning(f"Chroma vector store backend not available: {e}")
 
     try:
         from .vector_store.pinecone import PineconeVectorStoreBackend
+
         register_vector_store_backend("pinecone", PineconeVectorStoreBackend)
     except ImportError as e:
         logger.warning(f"Pinecone vector store backend not available: {e}")
 
     try:
         from .vector_store.weaviate import WeaviateVectorStoreBackend
+
         register_vector_store_backend("weaviate", WeaviateVectorStoreBackend)
     except ImportError as e:
         logger.warning(f"Weaviate vector store backend not available: {e}")

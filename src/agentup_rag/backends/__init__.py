@@ -11,6 +11,6 @@ from .factory import BackendFactory
 
 __all__ = [
     "EmbeddingBackend",
-    "VectorStoreBackend", 
+    "VectorStoreBackend",
     "BackendFactory",
 ]

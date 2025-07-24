@@ -5,12 +5,11 @@ This module contains unit and integration tests for the RAG plugin
 to ensure all components work correctly.
 """
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
 
 from agentup_rag.plugin import RAGPlugin
-from agentup_rag.models import VectorDocument, SearchResult, ChunkingConfig, RAGConfig
 
 
 class TestRAGPlugin:
@@ -24,7 +23,7 @@ class TestRAGPlugin:
         # Should return a list of capabilities
         assert isinstance(capabilities, list)
         assert len(capabilities) == 4  # index_document, semantic_search, ask_documents, list_collections
-        
+
         # Check first capability (index_document)
         first_capability = capabilities[0]
         assert first_capability.id == "index_document"
@@ -38,15 +37,9 @@ class TestRAGPlugin:
 
         config = {
             "embedding_backend": "openai",
-            "embedding_config": {
-                "model": "text-embedding-3-small",
-                "api_key": "sk-test123"
-            },
+            "embedding_config": {"model": "text-embedding-3-small", "api_key": "sk-test123"},
             "vector_backend": "memory",
-            "vector_config": {
-                "similarity_metric": "cosine",
-                "index_type": "flat"
-            }
+            "vector_config": {"similarity_metric": "cosine", "index_type": "flat"},
         }
 
         result = plugin.validate_config(config)
@@ -161,25 +154,11 @@ class TestRAGPluginIntegration:
         # Mock configuration
         self.test_config = {
             "embedding_backend": "openai",
-            "embedding_config": {
-                "model": "text-embedding-3-small",
-                "api_key": "sk-test123",
-                "batch_size": 10
-            },
+            "embedding_config": {"model": "text-embedding-3-small", "api_key": "sk-test123", "batch_size": 10},
             "vector_backend": "memory",
-            "vector_config": {
-                "similarity_metric": "cosine",
-                "index_type": "flat"
-            },
-            "chunking": {
-                "strategy": "recursive",
-                "chunk_size": 1000,
-                "chunk_overlap": 200
-            },
-            "search": {
-                "default_k": 5,
-                "max_k": 50
-            }
+            "vector_config": {"similarity_metric": "cosine", "index_type": "flat"},
+            "chunking": {"strategy": "recursive", "chunk_size": 1000, "chunk_overlap": 200},
+            "search": {"default_k": 5, "max_k": 50},
         }
 
     @pytest.mark.asyncio
@@ -270,10 +249,7 @@ class TestRAGPluginErrorHandling:
 
         # Mock context - plugin now gets params from task.metadata
         task = Mock()
-        task.metadata = {
-            "content": "test document",
-            "source": "test.txt"
-        }
+        task.metadata = {"content": "test document", "source": "test.txt"}
         context = Mock()
         context.config = {}
 
@@ -290,10 +266,7 @@ class TestRAGPluginErrorHandling:
 
         # Mock context with empty content
         task = Mock()
-        task.metadata = {
-            "content": "",
-            "source": "test.txt"
-        }
+        task.metadata = {"content": "", "source": "test.txt"}
         context = Mock()
         context.config = {}
 
@@ -310,12 +283,10 @@ class TestRAGPluginErrorHandling:
 
         # Mock context with empty query
         task = Mock()
-        task.metadata = {
-            "query": ""
-        }
+        task.metadata = {"query": ""}
         context = Mock()
         context.config = {}
-        
+
         # Mock plugin config to avoid comparison errors
         plugin.config = Mock()
         plugin.config.default_collection = "default"

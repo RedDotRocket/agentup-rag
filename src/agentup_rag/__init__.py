@@ -1,7 +1,7 @@
 """
 AgentUp RAG Plugin
 
-A comprehensive Retrieval-Augmented Generation plugin for AgentUp with semantic search 
+A comprehensive Retrieval-Augmented Generation plugin for AgentUp with semantic search
 and document retrieval capabilities.
 
 This plugin provides:

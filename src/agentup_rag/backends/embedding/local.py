@@ -13,7 +13,6 @@ import threading
 import time
 from typing import Any
 
-import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from ..base import EmbeddingBackend, EmbeddingError
@@ -99,7 +98,6 @@ class LocalEmbeddingBackend(EmbeddingBackend):
             return
 
         with self._model_lock:
-
             if self._model_loaded:
                 return
 
@@ -114,11 +112,7 @@ class LocalEmbeddingBackend(EmbeddingBackend):
                     os.makedirs(cache_folder, exist_ok=True)
 
                 # Load the model
-                self._model = SentenceTransformer(
-                    self.model_name,
-                    device=self.device,
-                    cache_folder=cache_folder
-                )
+                self._model = SentenceTransformer(self.model_name, device=self.device, cache_folder=cache_folder)
 
                 # Verify the model works by encoding a test sentence
                 test_embedding = self._model.encode(["test"], convert_to_numpy=True)
@@ -183,7 +177,9 @@ class LocalEmbeddingBackend(EmbeddingBackend):
                 text_indices.append(i)
 
         if not filtered_texts:
-            raise EmbeddingError("No valid texts to embed")
+            # Return zero embeddings for all texts if none are valid
+            dimension = self.get_embedding_dimension_sync()
+            return [[0.0] * dimension] * len(texts)
 
         try:
             # Load model if not already loaded
@@ -194,11 +190,7 @@ class LocalEmbeddingBackend(EmbeddingBackend):
 
             # Generate embeddings in thread pool
             loop = asyncio.get_event_loop()
-            embeddings = await loop.run_in_executor(
-                None,
-                self._generate_embeddings_sync,
-                filtered_texts
-            )
+            embeddings = await loop.run_in_executor(None, self._generate_embeddings_sync, filtered_texts)
 
             # Create result array with correct size, filling empty texts with None
             result = [None] * len(texts)
@@ -238,14 +230,14 @@ class LocalEmbeddingBackend(EmbeddingBackend):
         all_embeddings = []
 
         for i in range(0, len(texts), self.batch_size):
-            batch_texts = texts[i:i + self.batch_size]
+            batch_texts = texts[i : i + self.batch_size]
 
             # Generate embeddings for this batch
             batch_embeddings = self._model.encode(
                 batch_texts,
                 convert_to_numpy=True,
                 normalize_embeddings=self.normalize_embeddings,
-                show_progress_bar=False  # Avoid progress bars in production
+                show_progress_bar=False,  # Avoid progress bars in production
             )
 
             # Convert to list of lists
@@ -297,12 +289,12 @@ class LocalEmbeddingBackend(EmbeddingBackend):
     async def close(self) -> None:
         """Clean up resources used by the backend."""
         with self._model_lock:
-
             if self._model:
                 # Move model to CPU and clear CUDA cache if using CUDA
                 if self.device.startswith("cuda"):
                     try:
                         import torch
+
                         self._model = self._model.cpu()
                         torch.cuda.empty_cache()
                         logger.debug("Cleared CUDA cache for local embedding model")
@@ -348,7 +340,7 @@ class LocalEmbeddingBackend(EmbeddingBackend):
             return {
                 "model_name": self.model_name,
                 "embedding_dimension": self._model.get_sentence_embedding_dimension(),
-                "max_seq_length": getattr(self._model, 'max_seq_length', 'unknown'),
+                "max_seq_length": getattr(self._model, "max_seq_length", "unknown"),
                 "device": str(self._model.device),
                 "normalize_embeddings": self.normalize_embeddings,
             }
@@ -362,7 +354,8 @@ class LocalEmbeddingBackend(EmbeddingBackend):
             True if sentence-transformers can be imported
         """
         try:
-            import sentence_transformers
+            import sentence_transformers  # noqa: F401
+
             return True
         except ImportError:
             return False

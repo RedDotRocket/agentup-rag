@@ -5,20 +5,21 @@ This module contains tests for embedding and vector store backends
 to ensure they work correctly and integrate properly.
 """
 
-import pytest
-import numpy as np
-from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
+from unittest.mock import Mock, patch
 
+import pytest
+
+from agentup_rag.backends.base import EmbeddingError
 from agentup_rag.backends.factory import BackendFactory
-from agentup_rag.backends.base import EmbeddingError, VectorStoreError
-from agentup_rag.models import VectorDocument, SearchResult
+from agentup_rag.models import SearchResult, VectorDocument
 
 
 def _has_sentence_transformers() -> bool:
     """Check if sentence-transformers is available."""
     try:
-        import sentence_transformers
+        import sentence_transformers  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -55,12 +56,7 @@ class TestMemoryVectorStoreBackend:
         """Create a memory backend for testing."""
         from agentup_rag.backends.vector_store.memory import MemoryVectorStoreBackend
 
-        config = {
-            "similarity_metric": "cosine",
-            "index_type": "flat",
-            "persist_path": None,
-            "auto_save": False
-        }
+        config = {"similarity_metric": "cosine", "index_type": "flat", "persist_path": None, "auto_save": False}
 
         backend = MemoryVectorStoreBackend(config)
         return backend
@@ -99,7 +95,7 @@ class TestMemoryVectorStoreBackend:
                 metadata={"topic": "ml"},
                 source="test1.txt",
                 chunk_index=0,
-                created_at=datetime.utcnow()
+                created_at=datetime.utcnow(),
             ),
             VectorDocument(
                 id="doc2",
@@ -108,8 +104,8 @@ class TestMemoryVectorStoreBackend:
                 metadata={"topic": "dl"},
                 source="test2.txt",
                 chunk_index=0,
-                created_at=datetime.utcnow()
-            )
+                created_at=datetime.utcnow(),
+            ),
         ]
 
         # Add vectors
@@ -137,7 +133,7 @@ class TestMemoryVectorStoreBackend:
                 metadata={},
                 source="delete_test.txt",
                 chunk_index=0,
-                created_at=datetime.utcnow()
+                created_at=datetime.utcnow(),
             )
         ]
 
@@ -167,7 +163,7 @@ class TestOpenAIEmbeddingBackend:
             "batch_size": 10,
             "rate_limit": 60,
             "max_retries": 3,
-            "timeout": 30
+            "timeout": 30,
         }
 
     def test_config_validation_valid(self, openai_config):
@@ -184,10 +180,7 @@ class TestOpenAIEmbeddingBackend:
         from agentup_rag.backends.embedding.openai import OpenAIEmbeddingBackend
 
         # Missing API key
-        invalid_config = {
-            "model": "text-embedding-3-small",
-            "batch_size": 10
-        }
+        invalid_config = {"model": "text-embedding-3-small", "batch_size": 10}
 
         with pytest.raises(ValueError, match="API key is required"):
             OpenAIEmbeddingBackend(invalid_config)
@@ -212,11 +205,11 @@ class TestOpenAIEmbeddingBackend:
         mock_response = Mock()
         mock_response.json.return_value = {
             "data": [{"embedding": [0.1, 0.2, 0.3], "index": 0}],
-            "usage": {"total_tokens": 5}
+            "usage": {"total_tokens": 5},
         }
         mock_response.raise_for_status = Mock()
 
-        with patch.object(backend._client, 'post', return_value=mock_response):
+        with patch.object(backend._client, "post", return_value=mock_response):
             embedding = await backend.embed_text("test text")
 
             assert embedding == [0.1, 0.2, 0.3]
@@ -231,15 +224,12 @@ class TestOpenAIEmbeddingBackend:
         # Mock the HTTP client response
         mock_response = Mock()
         mock_response.json.return_value = {
-            "data": [
-                {"embedding": [0.1, 0.2, 0.3], "index": 0},
-                {"embedding": [0.4, 0.5, 0.6], "index": 1}
-            ],
-            "usage": {"total_tokens": 10}
+            "data": [{"embedding": [0.1, 0.2, 0.3], "index": 0}, {"embedding": [0.4, 0.5, 0.6], "index": 1}],
+            "usage": {"total_tokens": 10},
         }
         mock_response.raise_for_status = Mock()
 
-        with patch.object(backend._client, 'post', return_value=mock_response):
+        with patch.object(backend._client, "post", return_value=mock_response):
             embeddings = await backend.embed_batch(["text 1", "text 2"])
 
             assert len(embeddings) == 2
@@ -249,8 +239,9 @@ class TestOpenAIEmbeddingBackend:
     @pytest.mark.asyncio
     async def test_error_handling(self, openai_config):
         """Test error handling in OpenAI backend."""
-        from agentup_rag.backends.embedding.openai import OpenAIEmbeddingBackend
         import httpx
+
+        from agentup_rag.backends.embedding.openai import OpenAIEmbeddingBackend
 
         backend = OpenAIEmbeddingBackend(openai_config)
 
@@ -259,13 +250,9 @@ class TestOpenAIEmbeddingBackend:
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
 
-        http_error = httpx.HTTPStatusError(
-            "Unauthorized",
-            request=Mock(),
-            response=mock_response
-        )
+        http_error = httpx.HTTPStatusError("Unauthorized", request=Mock(), response=mock_response)
 
-        with patch.object(backend._client, 'post', side_effect=http_error):
+        with patch.object(backend._client, "post", side_effect=http_error):
             with pytest.raises(EmbeddingError, match="Invalid OpenAI API key"):
                 await backend.embed_text("test text")
 
@@ -283,9 +270,10 @@ class TestOpenAIEmbeddingBackend:
 
         # This should trigger rate limiting
         import time
-        start_time = time.time()
+
+        _start_time = time.time()
         await backend._rate_limit()
-        end_time = time.time()
+        _end_time = time.time()
 
         # Should have been delayed (though we can't easily test the exact timing)
         assert True  # Just verify no exception was raised
@@ -302,7 +290,7 @@ class TestLocalEmbeddingBackend:
             "device": "cpu",
             "batch_size": 16,
             "cache_dir": None,
-            "normalize_embeddings": True
+            "normalize_embeddings": True,
         }
 
     def test_config_validation_valid(self, local_config):
@@ -321,10 +309,7 @@ class TestLocalEmbeddingBackend:
         from agentup_rag.backends.embedding.local import LocalEmbeddingBackend
 
         # Missing model
-        invalid_config = {
-            "device": "cpu",
-            "batch_size": 16
-        }
+        invalid_config = {"device": "cpu", "batch_size": 16}
 
         with pytest.raises(ValueError, match="Model name is required"):
             LocalEmbeddingBackend(invalid_config)
@@ -347,10 +332,7 @@ class TestLocalEmbeddingBackend:
         with pytest.raises(ValueError, match="Batch size must be between"):
             LocalEmbeddingBackend(local_config)
 
-    @pytest.mark.skipif(
-        not _has_sentence_transformers(),
-        reason="sentence-transformers not available"
-    )
+    @pytest.mark.skipif(not _has_sentence_transformers(), reason="sentence-transformers not available")
     @pytest.mark.asyncio
     async def test_embed_text_real(self, local_config):
         """Test text embedding with real model (if available)."""
@@ -368,10 +350,7 @@ class TestLocalEmbeddingBackend:
         finally:
             await backend.close()
 
-    @pytest.mark.skipif(
-        not _has_sentence_transformers(),
-        reason="sentence-transformers not available"
-    )
+    @pytest.mark.skipif(not _has_sentence_transformers(), reason="sentence-transformers not available")
     @pytest.mark.asyncio
     async def test_embed_batch_real(self, local_config):
         """Test batch embedding with real model (if available)."""
@@ -380,11 +359,7 @@ class TestLocalEmbeddingBackend:
         backend = LocalEmbeddingBackend(local_config)
 
         try:
-            texts = [
-                "This is the first sentence.",
-                "This is the second sentence.",
-                "This is the third sentence."
-            ]
+            texts = ["This is the first sentence.", "This is the second sentence.", "This is the third sentence."]
 
             embeddings = await backend.embed_batch(texts)
 
@@ -403,8 +378,8 @@ class TestLocalEmbeddingBackend:
     @pytest.mark.asyncio
     async def test_empty_text_handling(self, local_config):
         """Test handling of empty text."""
-        from agentup_rag.backends.embedding.local import LocalEmbeddingBackend
         from agentup_rag.backends.base import EmbeddingError
+        from agentup_rag.backends.embedding.local import LocalEmbeddingBackend
 
         backend = LocalEmbeddingBackend(local_config)
 
@@ -494,14 +469,10 @@ class TestProcessingComponents:
 
     def test_text_chunker_fixed_strategy(self):
         """Test fixed-size chunking strategy."""
-        from agentup_rag.processing.chunking import TextChunker
         from agentup_rag.models import ChunkingConfig, ChunkingStrategy
+        from agentup_rag.processing.chunking import TextChunker
 
-        config = ChunkingConfig(
-            strategy=ChunkingStrategy.FIXED,
-            chunk_size=100,
-            chunk_overlap=20
-        )
+        config = ChunkingConfig(strategy=ChunkingStrategy.FIXED, chunk_size=100, chunk_overlap=20)
 
         chunker = TextChunker(config)
         text = "This is a long text that should be split into multiple chunks. " * 10
@@ -514,14 +485,11 @@ class TestProcessingComponents:
 
     def test_text_chunker_recursive_strategy(self):
         """Test recursive chunking strategy."""
-        from agentup_rag.processing.chunking import TextChunker
         from agentup_rag.models import ChunkingConfig, ChunkingStrategy
+        from agentup_rag.processing.chunking import TextChunker
 
         config = ChunkingConfig(
-            strategy=ChunkingStrategy.RECURSIVE,
-            chunk_size=200,
-            chunk_overlap=50,
-            separators=["\n\n", "\n", ".", " "]
+            strategy=ChunkingStrategy.RECURSIVE, chunk_size=200, chunk_overlap=50, separators=["\n\n", "\n", ".", " "]
         )
 
         chunker = TextChunker(config)
@@ -539,9 +507,9 @@ This is paragraph three."""
 
     def test_document_processor(self):
         """Test document processor."""
-        from agentup_rag.processing.document_processor import DocumentProcessor
-        from agentup_rag.processing.chunking import TextChunker
         from agentup_rag.models import ChunkingConfig
+        from agentup_rag.processing.chunking import TextChunker
+        from agentup_rag.processing.document_processor import DocumentProcessor
 
         processor = DocumentProcessor()
         chunker = TextChunker(ChunkingConfig())

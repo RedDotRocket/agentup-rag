@@ -16,22 +16,22 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     # Core AgentUp dependency
-    "agentup>=0.1.0",
+    "agentup>=0.3.0",
 
     # Data models and validation
     "pydantic>=2.0.0",
 
     # Async HTTP client
-    "httpx>=0.24.0",
+    "httpx[http2]>=0.24.0",
 
     # Document processing
     "PyMuPDF>=1.23.0",  # PDF processing
@@ -61,8 +61,8 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = [
-    "faiss-gpu>=1.7.2",
-    "torch[cuda]>=2.0.0",
+    "faiss-gpu-cu12>=1.8.0; python_version<'3.13'",
+    "torch>=2.0.0",
 ]
 dev = [
     "pytest>=7.4.0",
@@ -83,10 +83,10 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/agentup/agentup-rag"
+Homepage = "https://github.com/RedDotRocket/agentup-rag"
 Documentation = "https://agentup-rag.readthedocs.io"
-Repository = "https://github.com/agentup/agentup-rag"
-"Bug Tracker" = "https://github.com/agentup/agentup-rag/issues"
+Repository = "https://github.com/RedDotRocket/agentup-rag"
+"Bug Tracker" = "https://github.com/RedDotRocket/agentup-rag/issues"
 
 [project.entry-points."agentup.capabilities"]
 agentup_rag = "agentup_rag.plugin:RAGPlugin"

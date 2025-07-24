@@ -44,10 +44,10 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
             "text-embedding-3-large": 3072,
             "text-embedding-ada-002": 1536,
         }
-        
+
         # Initialize client to None to avoid AttributeError in __del__
         self._client: httpx.AsyncClient = None
-        
+
         super().__init__(config)
 
         self.api_key = config["api_key"]
@@ -101,18 +101,9 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
             headers["OpenAI-Organization"] = self.organization
 
         # Configure timeouts and connection pooling
-        timeout = httpx.Timeout(
-            connect=10.0,
-            read=self.timeout,
-            write=10.0,
-            pool=30.0
-        )
+        timeout = httpx.Timeout(connect=10.0, read=self.timeout, write=10.0, pool=30.0)
 
-        limits = httpx.Limits(
-            max_connections=20,
-            max_keepalive_connections=10,
-            keepalive_expiry=30.0
-        )
+        limits = httpx.Limits(max_connections=20, max_keepalive_connections=10, keepalive_expiry=30.0)
 
         self._client = httpx.AsyncClient(
             headers=headers,
@@ -147,11 +138,7 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
             # Record this request
             self._request_times.append(now)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True
-    )
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), reraise=True)
     async def _make_embedding_request(self, texts: list[str]) -> list[list[float]]:
         """Make an embedding request to OpenAI API with retries.
 
@@ -166,19 +153,12 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
         """
         await self._rate_limit()
 
-        payload = {
-            "model": self.model,
-            "input": texts,
-            "encoding_format": "float"
-        }
+        payload = {"model": self.model, "input": texts, "encoding_format": "float"}
 
         try:
             start_time = time.time()
 
-            response = await self._client.post(
-                "https://api.openai.com/v1/embeddings",
-                json=payload
-            )
+            response = await self._client.post("https://api.openai.com/v1/embeddings", json=payload)
 
             request_time = (time.time() - start_time) * 1000
             logger.debug(f"OpenAI API request took {request_time:.2f}ms for {len(texts)} texts")
@@ -189,10 +169,7 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
             # Extract embeddings in correct order
             embeddings = []
             for i in range(len(texts)):
-                embedding_data = next(
-                    (item for item in result["data"] if item["index"] == i),
-                    None
-                )
+                embedding_data = next((item for item in result["data"] if item["index"] == i), None)
                 if embedding_data is None:
                     raise EmbeddingError(f"Missing embedding for text at index {i}")
 
@@ -279,10 +256,7 @@ class OpenAIEmbeddingBackend(EmbeddingBackend):
             raise EmbeddingError("No valid texts to embed")
 
         # Split into batches
-        batches = [
-            filtered_texts[i:i + self.batch_size]
-            for i in range(0, len(filtered_texts), self.batch_size)
-        ]
+        batches = [filtered_texts[i : i + self.batch_size] for i in range(0, len(filtered_texts), self.batch_size)]
 
         logger.debug(f"Embedding {len(filtered_texts)} texts in {len(batches)} batches")
 

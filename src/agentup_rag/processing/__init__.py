@@ -13,6 +13,6 @@ from .loaders import DocumentLoader
 
 __all__ = [
     "TextChunker",
-    "DocumentProcessor", 
+    "DocumentProcessor",
     "DocumentLoader",
 ]

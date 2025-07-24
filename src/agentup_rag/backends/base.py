@@ -5,9 +5,8 @@ This module defines the interfaces that all backend implementations must follow,
 ensuring consistent behavior across different providers.
 """
 
-import asyncio
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from ..models import SearchResult, VectorDocument
 
@@ -77,7 +76,7 @@ class EmbeddingBackend(ABC):
         test_embedding = await self.embed_text("test")
         return len(test_embedding)
 
-    async def close(self) -> None:
+    async def close(self) -> None:  # noqa: B027
         """Clean up resources used by the backend.
 
         This method should be called when the backend is no longer needed.
@@ -123,11 +122,7 @@ class VectorStoreBackend(ABC):
         pass
 
     @abstractmethod
-    async def add_vectors(
-        self,
-        vectors: list[VectorDocument],
-        collection: Optional[str] = None
-    ) -> None:
+    async def add_vectors(self, vectors: list[VectorDocument], collection: str | None = None) -> None:
         """Add vector documents to the store.
 
         Args:
@@ -144,8 +139,8 @@ class VectorStoreBackend(ABC):
         self,
         query_vector: list[float],
         k: int = 5,
-        collection: Optional[str] = None,
-        filters: Optional[dict[str, Any]] = None
+        collection: str | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> SearchResult:
         """Search for similar vectors.
 
@@ -164,11 +159,7 @@ class VectorStoreBackend(ABC):
         pass
 
     @abstractmethod
-    async def delete_vectors(
-        self,
-        vector_ids: list[str],
-        collection: Optional[str] = None
-    ) -> None:
+    async def delete_vectors(self, vector_ids: list[str], collection: str | None = None) -> None:
         """Delete vectors by their IDs.
 
         Args:
@@ -181,7 +172,7 @@ class VectorStoreBackend(ABC):
         pass
 
     @abstractmethod
-    async def get_collection_stats(self, collection: Optional[str] = None) -> dict[str, Any]:
+    async def get_collection_stats(self, collection: str | None = None) -> dict[str, Any]:
         """Get statistics about a collection.
 
         Args:
@@ -208,12 +199,7 @@ class VectorStoreBackend(ABC):
         pass
 
     @abstractmethod
-    async def create_collection(
-        self,
-        name: str,
-        dimension: int,
-        description: Optional[str] = None
-    ) -> None:
+    async def create_collection(self, name: str, dimension: int, description: str | None = None) -> None:
         """Create a new collection.
 
         Args:
@@ -238,7 +224,7 @@ class VectorStoreBackend(ABC):
         """
         pass
 
-    async def close(self) -> None:
+    async def close(self) -> None:  # noqa: B027
         """Clean up resources used by the backend.
 
         This method should be called when the backend is no longer needed.
@@ -248,14 +234,17 @@ class VectorStoreBackend(ABC):
 
 class BackendError(Exception):
     """Base exception for backend errors."""
+
     pass
 
 
 class EmbeddingError(BackendError):
     """Exception raised for embedding backend errors."""
+
     pass
 
 
 class VectorStoreError(BackendError):
     """Exception raised for vector store backend errors."""
+
     pass

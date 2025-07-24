@@ -8,22 +8,21 @@ hook system to provide RAG (Retrieval-Augmented Generation) capabilities.
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pluggy
 from agent.plugins import (
     AIFunction,
-    CapabilityType,
     CapabilityContext,
     CapabilityInfo,
     CapabilityResult,
+    CapabilityType,
     ValidationResult,
 )
 
 from .backends.base import EmbeddingBackend, VectorStoreBackend
 from .backends.factory import BackendFactory
 from .models import (
-    Chunk,
     RAGConfig,
     VectorDocument,
 )
@@ -50,15 +49,15 @@ class RAGPlugin:
         self.version = "0.1.0"
 
         # Backend instances
-        self.embedding_backend: Optional[EmbeddingBackend] = None
-        self.vector_backend: Optional[VectorStoreBackend] = None
+        self.embedding_backend: EmbeddingBackend | None = None
+        self.vector_backend: VectorStoreBackend | None = None
 
         # Configuration
-        self.config: Optional[RAGConfig] = None
+        self.config: RAGConfig | None = None
 
         # Processing components
-        self.document_processor: Optional[DocumentProcessor] = None
-        self.text_chunker: Optional[TextChunker] = None
+        self.document_processor: DocumentProcessor | None = None
+        self.text_chunker: TextChunker | None = None
 
         # Services injected by AgentUp
         self.http_client = None
@@ -72,7 +71,7 @@ class RAGPlugin:
         """Register the RAG capabilities with AgentUp.
 
         Returns:
-            List of CapabilityInfo describing the plugin's capabilities
+            list of CapabilityInfo describing the plugin's capabilities
         """
         return [
             CapabilityInfo(
@@ -110,15 +109,15 @@ class RAGPlugin:
             ),
             CapabilityInfo(
                 id="list_collections",
-                name="List Collections",
+                name="list Collections",
                 version=self.version,
-                description="List available document collections",
+                description="list available document collections",
                 plugin_name="rag",
                 capabilities=[CapabilityType.AI_FUNCTION],
                 tags=["rag", "collections"],
                 required_scopes=["rag:access"],
                 config_schema=self._get_config_schema(),
-            )
+            ),
         ]
 
     def _get_system_prompt(self) -> str:
@@ -142,7 +141,7 @@ class RAGPlugin:
         - delete_documents: Remove documents from the index
         """
 
-    def _get_config_schema(self) -> Dict[str, Any]:
+    def _get_config_schema(self) -> dict[str, Any]:
         """Get the configuration schema for the plugin.
 
         Returns:
@@ -154,62 +153,40 @@ class RAGPlugin:
                 "embedding_backend": {
                     "type": "string",
                     "enum": ["openai", "local"],
-                    "description": "Embedding backend to use"
+                    "description": "Embedding backend to use",
                 },
-                "embedding_config": {
-                    "type": "object",
-                    "description": "Embedding backend configuration"
-                },
+                "embedding_config": {"type": "object", "description": "Embedding backend configuration"},
                 "vector_backend": {
                     "type": "string",
                     "enum": ["memory", "chroma", "pinecone", "weaviate"],
-                    "description": "Vector store backend to use"
+                    "description": "Vector store backend to use",
                 },
-                "vector_config": {
-                    "type": "object",
-                    "description": "Vector store backend configuration"
-                },
+                "vector_config": {"type": "object", "description": "Vector store backend configuration"},
                 "chunking": {
                     "type": "object",
                     "properties": {
                         "strategy": {
                             "type": "string",
                             "enum": ["fixed", "recursive", "semantic"],
-                            "default": "recursive"
+                            "default": "recursive",
                         },
-                        "chunk_size": {
-                            "type": "integer",
-                            "default": 1000,
-                            "minimum": 100
-                        },
-                        "chunk_overlap": {
-                            "type": "integer",
-                            "default": 200,
-                            "minimum": 0
-                        }
-                    }
+                        "chunk_size": {"type": "integer", "default": 1000, "minimum": 100},
+                        "chunk_overlap": {"type": "integer", "default": 200, "minimum": 0},
+                    },
                 },
                 "search": {
                     "type": "object",
                     "properties": {
-                        "default_k": {
-                            "type": "integer",
-                            "default": 5,
-                            "minimum": 1
-                        },
-                        "max_k": {
-                            "type": "integer",
-                            "default": 100,
-                            "minimum": 1
-                        }
-                    }
-                }
+                        "default_k": {"type": "integer", "default": 5, "minimum": 1},
+                        "max_k": {"type": "integer", "default": 100, "minimum": 1},
+                    },
+                },
             },
-            "required": ["embedding_backend", "embedding_config", "vector_backend", "vector_config"]
+            "required": ["embedding_backend", "embedding_config", "vector_backend", "vector_config"],
         }
 
     @hookimpl
-    def validate_config(self, config: Dict[str, Any]) -> ValidationResult:
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """Validate the plugin configuration.
 
         Args:
@@ -225,7 +202,7 @@ class RAGPlugin:
         try:
             # Validate using Pydantic model
             rag_config = RAGConfig(**config)
-            
+
             # Store the validated configuration for later use
             self.config = rag_config
             logger.info("RAG plugin configuration validated and stored")
@@ -262,11 +239,11 @@ class RAGPlugin:
         )
 
     @hookimpl
-    def configure_services(self, services: Dict[str, Any]) -> None:
+    def configure_services(self, services: dict[str, Any]) -> None:
         """Configure services for the plugin.
 
         Args:
-            services: Dictionary of available services
+            services: dictionary of available services
         """
         self.services = services
 
@@ -274,6 +251,7 @@ class RAGPlugin:
         self.http_client = services.get("http_client")
         if not self.http_client:
             import httpx
+
             self.http_client = httpx.AsyncClient()
 
         # Get cache service if available
@@ -295,17 +273,17 @@ class RAGPlugin:
 
         # High confidence keywords
         rag_keywords = {
-            'search': 1.0,
-            'find': 0.9,
-            'document': 0.9,
-            'index': 0.9,
-            'retrieval': 1.0,
-            'semantic': 1.0,
-            'similar': 0.8,
-            'lookup': 0.8,
-            'query': 0.8,
-            'ask': 0.7,
-            'question': 0.7,
+            "search": 1.0,
+            "find": 0.9,
+            "document": 0.9,
+            "index": 0.9,
+            "retrieval": 1.0,
+            "semantic": 1.0,
+            "similar": 0.8,
+            "lookup": 0.8,
+            "query": 0.8,
+            "ask": 0.7,
+            "question": 0.7,
         }
 
         # Question patterns that suggest RAG use
@@ -331,12 +309,13 @@ class RAGPlugin:
 
         # Check pattern matches
         import re
+
         for pattern in rag_patterns:
             if re.search(pattern, user_input):
                 confidence = max(confidence, 0.8)
 
         # Boost confidence for explicit document/search references
-        if any(word in user_input for word in ['document', 'search', 'find', 'lookup']):
+        if any(word in user_input for word in ["document", "search", "find", "lookup"]):
             confidence = min(confidence + 0.2, 1.0)
 
         return confidence
@@ -355,6 +334,7 @@ class RAGPlugin:
             # Initialize if not already done
             if not self.embedding_backend or not self.vector_backend:
                 import asyncio
+
                 asyncio.run(self._initialize_backends(context.config))
 
             # Extract user input and determine intent
@@ -380,7 +360,7 @@ class RAGPlugin:
                 error=str(e),
             )
 
-    async def _initialize_backends(self, config: Dict[str, Any]) -> None:
+    async def _initialize_backends(self, config: dict[str, Any]) -> None:
         """Initialize embedding and vector store backends.
 
         Args:
@@ -391,14 +371,12 @@ class RAGPlugin:
 
             # Initialize embedding backend
             self.embedding_backend = BackendFactory.create_embedding_backend(
-                self.config.embedding_backend,
-                self.config.embedding_config.dict()
+                self.config.embedding_backend, self.config.embedding_config.dict()
             )
 
             # Initialize vector store backend
             self.vector_backend = BackendFactory.create_vector_store_backend(
-                self.config.vector_backend,
-                self.config.vector_config.dict()
+                self.config.vector_backend, self.config.vector_config.dict()
             )
 
             # Initialize vector backend (properly await it)
@@ -406,6 +384,7 @@ class RAGPlugin:
 
             # Initialize processing components
             from .processing import DocumentProcessor, TextChunker
+
             self.document_processor = DocumentProcessor()
             self.text_chunker = TextChunker(self.config.chunking)
 
@@ -424,10 +403,10 @@ class RAGPlugin:
         Returns:
             User input text
         """
-        if hasattr(context.task, 'history') and context.task.history:
+        if hasattr(context.task, "history") and context.task.history:
             last_msg = context.task.history[-1]
-            if hasattr(last_msg, 'parts') and last_msg.parts:
-                return last_msg.parts[0].text if hasattr(last_msg.parts[0], 'text') else ""
+            if hasattr(last_msg, "parts") and last_msg.parts:
+                return last_msg.parts[0].text if hasattr(last_msg.parts[0], "text") else ""
         return ""
 
     def _determine_intent(self, user_input: str) -> str:
@@ -442,11 +421,11 @@ class RAGPlugin:
         user_input = user_input.lower()
 
         # Index intent keywords
-        if any(word in user_input for word in ['index', 'add', 'store', 'save', 'upload']):
+        if any(word in user_input for word in ["index", "add", "store", "save", "upload"]):
             return "index"
 
         # Question/ask intent keywords
-        if any(word in user_input for word in ['what', 'how', 'why', 'when', 'where', 'explain', 'tell me']):
+        if any(word in user_input for word in ["what", "how", "why", "when", "where", "explain", "tell me"]):
             return "ask"
 
         # Default to search
@@ -466,7 +445,7 @@ class RAGPlugin:
         # extract document content from the context or request it from the user
         return CapabilityResult(
             content="Document indexing is available through the index_document AI function. "
-                   "Please use that function to add documents to the search index.",
+            "Please use that function to add documents to the search index.",
             success=True,
             metadata={"intent": "index"},
         )
@@ -484,7 +463,7 @@ class RAGPlugin:
         # This is a placeholder - actual search would be implemented via AI functions
         return CapabilityResult(
             content="Search functionality is available through the semantic_search AI function. "
-                   "Please use that function to search for relevant documents.",
+            "Please use that function to search for relevant documents.",
             success=True,
             metadata={"intent": "search", "query": user_input},
         )
@@ -502,46 +481,20 @@ class RAGPlugin:
         # This is a placeholder - actual QA would be implemented via AI functions
         return CapabilityResult(
             content="Question answering is available through the ask_documents AI function. "
-                   "Please use that function to get answers based on indexed documents.",
+            "Please use that function to get answers based on indexed documents.",
             success=True,
             metadata={"intent": "ask", "question": user_input},
         )
 
     @hookimpl
-    def configure_services(self, services: dict) -> None:
-        """Configure services for the RAG plugin.
-        
-        Args:
-            services: Dictionary of available services
-        """
-        try:
-            # Store services for later use
-            self.services = services
-            
-            # Try to get and store plugin configuration from services
-            if 'config' in services:
-                plugin_config = services['config']
-                logger.info(f"RAG plugin received configuration: {plugin_config}")
-                if plugin_config:
-                    try:
-                        self.config = RAGConfig(**plugin_config)
-                        logger.info("RAG plugin configuration validated and stored")
-                    except Exception as e:
-                        logger.error(f"Invalid RAG plugin configuration: {e}")
-            
-            logger.info("RAG plugin services configured successfully")
-        except Exception as e:
-            logger.error(f"Failed to configure RAG plugin services: {e}")
-
-    @hookimpl
-    def get_ai_functions(self, capability_id: str = None) -> List[AIFunction]:
+    def get_ai_functions(self, capability_id: str = None) -> list[AIFunction]:
         """Provide AI functions for LLM integration.
 
         Args:
             capability_id: Optional capability ID to filter functions for
 
         Returns:
-            List of AI functions that can be called by LLMs
+            list of AI functions that can be called by LLMs
         """
         # Define all AI functions
         all_functions = [
@@ -551,128 +504,106 @@ class RAGPlugin:
                 parameters={
                     "type": "object",
                     "properties": {
-                        "content": {
-                            "type": "string",
-                            "description": "Document content to index"
-                        },
-                        "source": {
-                            "type": "string",
-                            "description": "Source identifier (filename, URL, etc.)"
-                        },
+                        "content": {"type": "string", "description": "Document content to index"},
+                        "source": {"type": "string", "description": "Source identifier (filename, URL, etc.)"},
                         "collection": {
                             "type": "string",
                             "description": "Collection name (optional)",
-                            "default": "default"
+                            "default": "default",
                         },
                         "metadata": {
                             "type": "object",
                             "description": "Additional metadata to store",
-                            "additionalProperties": True
-                        }
+                            "additionalProperties": True,
+                        },
                     },
-                    "required": ["content"]
+                    "required": ["content"],
                 },
                 handler=self._handle_index_document_function,
             ),
-
             AIFunction(
                 name="semantic_search",
                 description="Search for semantically similar content",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "Search query text"
-                        },
+                        "query": {"type": "string", "description": "Search query text"},
                         "collection": {
                             "type": "string",
                             "description": "Collection to search in",
-                            "default": "default"
+                            "default": "default",
                         },
                         "k": {
                             "type": "integer",
                             "description": "Number of results to return",
                             "minimum": 1,
                             "maximum": 100,
-                            "default": 5
+                            "default": 5,
                         },
                         "similarity_threshold": {
                             "type": "number",
                             "description": "Minimum similarity score",
                             "minimum": 0.0,
                             "maximum": 1.0,
-                            "default": 0.0
+                            "default": 0.0,
                         },
-                        "filters": {
-                            "type": "object",
-                            "description": "Metadata filters",
-                            "additionalProperties": True
-                        }
+                        "filters": {"type": "object", "description": "Metadata filters", "additionalProperties": True},
                     },
-                    "required": ["query"]
+                    "required": ["query"],
                 },
                 handler=self._handle_semantic_search_function,
             ),
-
             AIFunction(
                 name="ask_documents",
                 description="Ask a question and get an answer based on indexed documents",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "question": {
-                            "type": "string",
-                            "description": "Question to answer"
-                        },
+                        "question": {"type": "string", "description": "Question to answer"},
                         "collection": {
                             "type": "string",
                             "description": "Collection to search in",
-                            "default": "default"
+                            "default": "default",
                         },
                         "max_context_length": {
                             "type": "integer",
                             "description": "Maximum context length for RAG",
-                            "default": 4000
+                            "default": 4000,
                         },
                         "include_sources": {
                             "type": "boolean",
                             "description": "Include source references in response",
-                            "default": True
-                        }
+                            "default": True,
+                        },
                     },
-                    "required": ["question"]
+                    "required": ["question"],
                 },
                 handler=self._handle_ask_documents_function,
             ),
-
             AIFunction(
                 name="list_collections",
-                description="List available document collections",
-                parameters={
-                    "type": "object",
-                    "properties": {}
-                },
+                description="list available document collections",
+                parameters={"type": "object", "properties": {}},
                 handler=self._handle_list_collections_function,
             ),
         ]
-        
+
         # Filter functions based on capability_id if provided
         if capability_id:
             # Map capability IDs to their corresponding function names
             capability_to_function = {
                 "index_document": "index_document",
-                "semantic_search": "semantic_search", 
+                "semantic_search": "semantic_search",
                 "ask_documents": "ask_documents",
-                "list_collections": "list_collections"
+                "list_collections": "list_collections",
             }
-            
+
             function_name = capability_to_function.get(capability_id)
             if function_name:
                 return [f for f in all_functions if f.name == function_name]
             else:
                 return []
-        
+
         # Return all functions if no capability_id specified
         return all_functions
 
@@ -689,11 +620,11 @@ class RAGPlugin:
         try:
             # Extract parameters from task metadata (where function arguments are placed)
             # First try the task metadata (new format), then fall back to context metadata (legacy)
-            if hasattr(task, 'metadata') and task.metadata:
+            if hasattr(task, "metadata") and task.metadata:
                 params = task.metadata
             else:
                 params = context.metadata.get("parameters", {})
-            
+
             content = params.get("content")
             source = params.get("source", "unknown")
             collection_name = params.get("collection", self.config.default_collection if self.config else "default")
@@ -702,9 +633,7 @@ class RAGPlugin:
             # Validate input
             if not content or len(content.strip()) == 0:
                 return CapabilityResult(
-                    content="Error: Document content cannot be empty",
-                    success=False,
-                    error="EMPTY_CONTENT"
+                    content="Error: Document content cannot be empty", success=False, error="EMPTY_CONTENT"
                 )
 
             # Initialize backends if needed
@@ -714,9 +643,7 @@ class RAGPlugin:
                     config_to_use = context.config if context.config else (self.config.dict() if self.config else None)
                     if not config_to_use:
                         return CapabilityResult(
-                            content="Error: No configuration available for RAG plugin",
-                            success=False,
-                            error="NO_CONFIG"
+                            content="Error: No configuration available for RAG plugin", success=False, error="NO_CONFIG"
                         )
                     await self._initialize_backends(config_to_use)
                 except Exception as e:
@@ -724,7 +651,7 @@ class RAGPlugin:
                     return CapabilityResult(
                         content=f"Error: Failed to initialize RAG backends: {str(e)}",
                         success=False,
-                        error="BACKEND_INIT_FAILED"
+                        error="BACKEND_INIT_FAILED",
                     )
 
             start_time = time.time()
@@ -736,7 +663,7 @@ class RAGPlugin:
                 return CapabilityResult(
                     content=f"Error processing document: {processing_result.error}",
                     success=False,
-                    error=processing_result.error
+                    error=processing_result.error,
                 )
 
             # Get chunks from processing result
@@ -748,7 +675,7 @@ class RAGPlugin:
 
             # Create vector documents
             vector_docs = []
-            for chunk, embedding in zip(chunks, embeddings):
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
                 vector_doc = VectorDocument(
                     id=VectorDocument.generate_id(chunk.content, source, chunk.chunk_index),
                     content=chunk.content,
@@ -756,7 +683,7 @@ class RAGPlugin:
                     metadata={**chunk.metadata, **metadata},
                     source=source,
                     chunk_index=chunk.chunk_index,
-                    created_at=datetime.utcnow()
+                    created_at=datetime.utcnow(),
                 )
                 vector_docs.append(vector_doc)
 
@@ -773,17 +700,13 @@ class RAGPlugin:
                     "chunks_created": len(vector_docs),
                     "collection": collection_name,
                     "source": source,
-                    "processing_time_ms": processing_time
-                }
+                    "processing_time_ms": processing_time,
+                },
             )
 
         except Exception as e:
             logger.error(f"Document indexing failed: {e}", exc_info=True)
-            return CapabilityResult(
-                content=f"Failed to index document: {str(e)}",
-                success=False,
-                error=str(e)
-            )
+            return CapabilityResult(content=f"Failed to index document: {str(e)}", success=False, error=str(e))
 
     async def _handle_semantic_search_function(self, task, context: CapabilityContext) -> CapabilityResult:
         """Handle the semantic_search AI function.
@@ -800,11 +723,11 @@ class RAGPlugin:
 
             # Extract parameters from task metadata (where function arguments are placed)
             # First try the task metadata (new format), then fall back to context metadata (legacy)
-            if hasattr(task, 'metadata') and task.metadata:
+            if hasattr(task, "metadata") and task.metadata:
                 params = task.metadata
             else:
                 params = context.metadata.get("parameters", {})
-                
+
             query = params.get("query")
             collection_name = params.get("collection", self.config.default_collection if self.config else "default")
             k = min(params.get("k", 5), self.config.max_k if self.config else 100)
@@ -814,9 +737,7 @@ class RAGPlugin:
             # Validate input
             if not query or len(query.strip()) == 0:
                 return CapabilityResult(
-                    content="Error: Search query cannot be empty",
-                    success=False,
-                    error="EMPTY_QUERY"
+                    content="Error: Search query cannot be empty", success=False, error="EMPTY_QUERY"
                 )
 
             # Initialize backends if needed
@@ -826,9 +747,7 @@ class RAGPlugin:
                     config_to_use = context.config if context.config else (self.config.dict() if self.config else None)
                     if not config_to_use:
                         return CapabilityResult(
-                            content="Error: No configuration available for RAG plugin",
-                            success=False,
-                            error="NO_CONFIG"
+                            content="Error: No configuration available for RAG plugin", success=False, error="NO_CONFIG"
                         )
                     await self._initialize_backends(config_to_use)
                 except Exception as e:
@@ -836,7 +755,7 @@ class RAGPlugin:
                     return CapabilityResult(
                         content=f"Error: Failed to initialize RAG backends: {str(e)}",
                         success=False,
-                        error="BACKEND_INIT_FAILED"
+                        error="BACKEND_INIT_FAILED",
                     )
 
             # Generate query embedding
@@ -844,29 +763,26 @@ class RAGPlugin:
 
             # Perform vector search
             search_result = await self.vector_backend.search(
-                query_vector=query_embedding,
-                k=k,
-                collection=collection_name,
-                filters=filters if filters else None
+                query_vector=query_embedding, k=k, collection=collection_name, filters=filters if filters else None
             )
 
             # Filter by similarity threshold
             filtered_docs = []
             filtered_scores = []
-            for doc, score in zip(search_result.documents, search_result.scores):
+            for doc, score in zip(search_result.documents, search_result.scores, strict=False):
                 if score >= similarity_threshold:
                     filtered_docs.append(doc)
                     filtered_scores.append(score)
 
             # Format results
             results = []
-            for doc, score in zip(filtered_docs, filtered_scores):
+            for doc, score in zip(filtered_docs, filtered_scores, strict=False):
                 result = {
                     "content": doc.content,
                     "score": score,
                     "source": doc.source,
                     "chunk_index": doc.chunk_index,
-                    "metadata": doc.metadata if self.config and self.config.include_metadata else {}
+                    "metadata": doc.metadata if self.config and self.config.include_metadata else {},
                 }
                 results.append(result)
 
@@ -886,17 +802,13 @@ class RAGPlugin:
                     "query": query,
                     "collection": collection_name,
                     "search_time_ms": search_time,
-                    "total_results": len(filtered_docs)
-                }
+                    "total_results": len(filtered_docs),
+                },
             )
 
         except Exception as e:
             logger.error(f"Semantic search failed: {e}", exc_info=True)
-            return CapabilityResult(
-                content=f"Search failed: {str(e)}",
-                success=False,
-                error=str(e)
-            )
+            return CapabilityResult(content=f"Search failed: {str(e)}", success=False, error=str(e))
 
     async def _handle_ask_documents_function(self, task, context: CapabilityContext) -> CapabilityResult:
         """Handle the ask_documents AI function.
@@ -913,22 +825,22 @@ class RAGPlugin:
 
             # Extract parameters from task metadata (where function arguments are placed)
             # First try the task metadata (new format), then fall back to context metadata (legacy)
-            if hasattr(task, 'metadata') and task.metadata:
+            if hasattr(task, "metadata") and task.metadata:
                 params = task.metadata
             else:
                 params = context.metadata.get("parameters", {})
-                
+
             question = params.get("question")
             collection_name = params.get("collection", self.config.default_collection if self.config else "default")
-            max_context_length = params.get("max_context_length", self.config.max_context_length if self.config else 4000)
+            max_context_length = params.get(
+                "max_context_length", self.config.max_context_length if self.config else 4000
+            )
             include_sources = params.get("include_sources", self.config.include_sources if self.config else True)
 
             # Validate input
             if not question or len(question.strip()) == 0:
                 return CapabilityResult(
-                    content="Error: Question cannot be empty",
-                    success=False,
-                    error="EMPTY_QUESTION"
+                    content="Error: Question cannot be empty", success=False, error="EMPTY_QUESTION"
                 )
 
             # Initialize backends if needed
@@ -938,9 +850,7 @@ class RAGPlugin:
                     config_to_use = context.config if context.config else (self.config.dict() if self.config else None)
                     if not config_to_use:
                         return CapabilityResult(
-                            content="Error: No configuration available for RAG plugin",
-                            success=False,
-                            error="NO_CONFIG"
+                            content="Error: No configuration available for RAG plugin", success=False, error="NO_CONFIG"
                         )
                     await self._initialize_backends(config_to_use)
                 except Exception as e:
@@ -948,7 +858,7 @@ class RAGPlugin:
                     return CapabilityResult(
                         content=f"Error: Failed to initialize RAG backends: {str(e)}",
                         success=False,
-                        error="BACKEND_INIT_FAILED"
+                        error="BACKEND_INIT_FAILED",
                     )
 
             # Perform semantic search to get relevant context
@@ -959,9 +869,9 @@ class RAGPlugin:
                         "query": question,
                         "collection": collection_name,
                         "k": 10,  # Get more results for context
-                        "similarity_threshold": 0.3
+                        "similarity_threshold": 0.3,
                     }
-                }
+                },
             )
 
             search_result = await self._handle_semantic_search_function(task, search_context)
@@ -974,12 +884,7 @@ class RAGPlugin:
                 return CapabilityResult(
                     content="I couldn't find any relevant information to answer your question. Please try rephrasing your question or check if relevant documents have been indexed.",
                     success=True,
-                    metadata={
-                        "function": "ask_documents",
-                        "question": question,
-                        "sources": [],
-                        "context_used": 0
-                    }
+                    metadata={"function": "ask_documents", "question": question, "sources": [], "context_used": 0},
                 )
 
             # Build context for LLM
@@ -995,24 +900,21 @@ class RAGPlugin:
                     break
 
                 context_parts.append(f"Source: {doc['source']}\nContent: {doc_content}")
-                sources.append({
-                    "source": doc["source"],
-                    "score": doc["score"],
-                    "chunk_index": doc["chunk_index"],
-                    "content_preview": doc_content[:200] + "..." if len(doc_content) > 200 else doc_content
-                })
+                sources.append(
+                    {
+                        "source": doc["source"],
+                        "score": doc["score"],
+                        "chunk_index": doc["chunk_index"],
+                        "content_preview": doc_content[:200] + "..." if len(doc_content) > 200 else doc_content,
+                    }
+                )
                 current_length += doc_length
 
             if not context_parts:
                 return CapabilityResult(
                     content="The relevant documents found were too long to process. Please try a more specific question.",
                     success=True,
-                    metadata={
-                        "function": "ask_documents",
-                        "question": question,
-                        "sources": [],
-                        "context_used": 0
-                    }
+                    metadata={"function": "ask_documents", "question": question, "sources": [], "context_used": 0},
                 )
 
             context = "\n\n".join(context_parts)
@@ -1043,17 +945,13 @@ class RAGPlugin:
                     "question": question,
                     "sources": sources if include_sources else [],
                     "context_length": current_length,
-                    "processing_time_ms": processing_time
-                }
+                    "processing_time_ms": processing_time,
+                },
             )
 
         except Exception as e:
             logger.error(f"RAG question answering failed: {e}", exc_info=True)
-            return CapabilityResult(
-                content=f"Failed to answer question: {str(e)}",
-                success=False,
-                error=str(e)
-            )
+            return CapabilityResult(content=f"Failed to answer question: {str(e)}", success=False, error=str(e))
 
     def _get_llm_service(self, context: CapabilityContext):
         """Get LLM service from AgentUp services.
@@ -1088,9 +986,13 @@ Please provide a helpful and accurate answer based on the context above."""
 
         try:
             from agent.llm_providers.base import ChatMessage
+
             messages = [
-                ChatMessage(role="system", content="You are a helpful assistant that answers questions based on provided context."),
-                ChatMessage(role="user", content=rag_prompt)
+                ChatMessage(
+                    role="system",
+                    content="You are a helpful assistant that answers questions based on provided context.",
+                ),
+                ChatMessage(role="user", content=rag_prompt),
             ]
 
             llm_response = await llm_service.chat_complete(messages)
@@ -1100,7 +1002,7 @@ Please provide a helpful and accurate answer based on the context above."""
             logger.warning(f"LLM answer generation failed, falling back to summary: {e}")
             return self._generate_summary_from_results([], question)
 
-    def _generate_summary_from_results(self, results: List[dict], question: str) -> str:
+    def _generate_summary_from_results(self, results: list[dict], question: str) -> str:
         """Generate a summary from search results when LLM is not available.
 
         Args:
@@ -1113,7 +1015,9 @@ Please provide a helpful and accurate answer based on the context above."""
         if not results:
             return "I couldn't find any relevant information to answer your question."
 
-        summary = f"Based on the documents I found, here are the most relevant excerpts for your question '{question}':\n\n"
+        summary = (
+            f"Based on the documents I found, here are the most relevant excerpts for your question '{question}':\n\n"
+        )
 
         for i, result in enumerate(results[:3], 1):  # Show top 3 results
             content = result["content"]
@@ -1173,7 +1077,7 @@ Please provide a helpful and accurate answer based on the context above."""
             )
 
     @hookimpl
-    def get_state_schema(self) -> Dict[str, Any]:
+    def get_state_schema(self) -> dict[str, Any]:
         """Define state schema for the RAG plugin.
 
         Returns:
@@ -1182,36 +1086,24 @@ Please provide a helpful and accurate answer based on the context above."""
         return {
             "type": "object",
             "properties": {
-                "last_search_query": {
-                    "type": "string",
-                    "description": "Last search query performed"
-                },
+                "last_search_query": {"type": "string", "description": "Last search query performed"},
                 "last_search_time": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Timestamp of last search"
+                    "description": "Timestamp of last search",
                 },
-                "search_count": {
-                    "type": "integer",
-                    "description": "Total number of searches performed"
-                },
-                "index_count": {
-                    "type": "integer",
-                    "description": "Total number of documents indexed"
-                },
-                "preferred_collection": {
-                    "type": "string",
-                    "description": "User's preferred collection"
-                },
+                "search_count": {"type": "integer", "description": "Total number of searches performed"},
+                "index_count": {"type": "integer", "description": "Total number of documents indexed"},
+                "preferred_collection": {"type": "string", "description": "User's preferred collection"},
             },
         }
 
     @hookimpl
-    def get_middleware_config(self) -> List[Dict[str, Any]]:
+    def get_middleware_config(self) -> list[dict[str, Any]]:
         """Request middleware for the RAG plugin.
 
         Returns:
-            List of middleware configurations
+            list of middleware configurations
         """
         return [
             {
@@ -1242,7 +1134,7 @@ Please provide a helpful and accurate answer based on the context above."""
         if self.vector_backend:
             await self.vector_backend.close()
 
-        if self.http_client and hasattr(self.http_client, 'aclose'):
+        if self.http_client and hasattr(self.http_client, "aclose"):
             await self.http_client.aclose()
 
         logger.info("RAG plugin cleanup completed")
